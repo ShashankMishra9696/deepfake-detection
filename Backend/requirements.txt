@@ -4,6 +4,6 @@ torch
 torchvision
 transformers
 pillow
+python-multipart
 safetensors
 python-multipart
-numpy
