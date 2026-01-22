@@ -6,5 +6,4 @@ transformers
 pillow
 safetensors
 python-multipart
-cv2
 numpy
