@@ -3,25 +3,52 @@
 import { useAuth } from "@/lib/AuthContext";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="center-page">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="center-page">
+        <p>You are not logged in.</p>
+      </div>
+    );
+  }
+
+  const joinedDate = user.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "N/A";
 
   return (
-    <main className="section pt-32 pb-24">
-      <h1 className="text-4xl font-semibold mb-8">
-        Profile
-      </h1>
+    <div className="page-container">
+      <h1>Profile</h1>
 
-      <div className="glass rounded-2xl p-6 max-w-xl">
-        <p className="text-slate-400 text-sm">Email</p>
-        <p className="mt-1">{user?.email}</p>
+      <div className="card profile-card">
+        <div className="profile-row">
+          <span>Email</span>
+          <strong>{user.email}</strong>
+        </div>
 
-        <p className="text-slate-400 text-sm mt-6">
-          Account Status
-        </p>
-        <p className="mt-1 text-emerald-400">
-          Active
-        </p>
+        <div className="profile-row">
+          <span>Joined On</span>
+          <strong>{joinedDate}</strong>
+        </div>
+
+        <div className="profile-row">
+          <span>User ID</span>
+          <strong>{user.uid}</strong>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

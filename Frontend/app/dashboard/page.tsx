@@ -1,31 +1,31 @@
-"use client";
-
 export default function DashboardPage() {
   return (
-    <main className="section pt-32 pb-24">
-      <h1 className="text-4xl font-semibold mb-10">
-        Dashboard
-      </h1>
+    <div className="section">
+      <div className="container">
+        <h1>Dashboard</h1>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {[
-          { title: "Total Scans", value: "—" },
-          { title: "Fake Detected", value: "—" },
-          { title: "Real Images", value: "—" },
-        ].map((card) => (
-          <div
-            key={card.title}
-            className="glass rounded-2xl p-6"
-          >
-            <h3 className="text-slate-400 text-sm">
-              {card.title}
-            </h3>
-            <p className="text-3xl font-semibold mt-2">
-              {card.value}
-            </p>
+        <div className="card-grid">
+          <div className="card">
+            <h3>Total Scans</h3>
+            <p>Number of images analyzed so far.</p>
+            <strong style={{ fontSize: "28px" }}>12</strong>
           </div>
-        ))}
+
+          <div className="card">
+            <h3>Fake Detected</h3>
+            <p>Images identified as deepfake.</p>
+            <strong style={{ fontSize: "28px", color: "#f87171" }}>5</strong>
+          </div>
+
+          <div className="card">
+            <h3>Accuracy</h3>
+            <p>Average confidence score.</p>
+            <strong style={{ fontSize: "28px", color: "#a78bfa" }}>
+              92%
+            </strong>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

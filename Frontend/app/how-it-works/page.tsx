@@ -1,27 +1,26 @@
 export default function HowItWorksPage() {
   return (
-    <main className="section pt-32 pb-24">
-      <h1 className="text-4xl font-semibold mb-16 text-center">
-        How It Works
-      </h1>
+    <div className="section">
+      <div className="container">
+        <h1>How It Works</h1>
 
-      <div className="grid md:grid-cols-3 gap-10 text-center">
-        {[
-          "User uploads an image for verification",
-          "Vision Transformer analyzes pixel-level patterns",
-          "System returns prediction with confidence score",
-        ].map((step, i) => (
-          <div
-            key={i}
-            className="glass rounded-2xl p-8"
-          >
-            <div className="text-indigo-400 text-3xl mb-4">
-              {i + 1}
-            </div>
-            <p className="text-slate-300">{step}</p>
+        <div className="card-grid">
+          <div className="card">
+            <h3>1. Upload Image</h3>
+            <p>Select an image you want to analyze.</p>
           </div>
-        ))}
+
+          <div className="card">
+            <h3>2. AI Analysis</h3>
+            <p>The model evaluates visual inconsistencies.</p>
+          </div>
+
+          <div className="card">
+            <h3>3. Get Result</h3>
+            <p>You receive a real/fake prediction with confidence.</p>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

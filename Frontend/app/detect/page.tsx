@@ -1,89 +1,99 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 
-export default function HomePage() {
+export default function DetectPage() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setResult(null);
+    setConfidence(null);
+    setError(null);
+  };
+
+  const handleAnalyze = async () => {
+    if (!imageFile) {
+      setError("Please upload an image first.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", imageFile);
+
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Backend error");
+      }
+
+      const data = await response.json();
+
+      setResult(data.label);
+      setConfidence(data.confidence);
+    } catch (err) {
+      setError("Failed to analyze image. Is backend running?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen">
-      {/* HERO */}
-      <section className="pt-32 pb-24 text-center px-6">
-        <h1 className="text-5xl font-bold tracking-tight mb-6">
-          Deepfake Image Detection
-        </h1>
-        <p className="text-slate-400 max-w-2xl mx-auto mb-10">
-          Detect AI-generated and manipulated images using a
-          state-of-the-art Vision Transformer deep learning model.
-        </p>
+    <div className="page-container">
+      <h1 className="page-title">Deepfake Image Detection</h1>
 
-        <div className="flex justify-center gap-4">
-          <Link
-            href="/detect"
-            className="px-6 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition"
-          >
-            Start Detection
-          </Link>
-          <Link
-            href="/signup"
-            className="px-6 py-3 rounded-lg border border-white/20 hover:bg-white/5 transition"
-          >
-            Create Account
-          </Link>
+      {/* Image Upload */}
+      <div className="form-group">
+        <label>Upload Image</label>
+        <input type="file" accept="image/*" onChange={handleImageChange} />
+      </div>
+
+      {/* Image Preview */}
+      {previewUrl && (
+        <img
+          src={previewUrl}
+          alt="Preview"
+          style={{
+            marginTop: "1rem",
+            borderRadius: "12px",
+            maxWidth: "100%",
+          }}
+        />
+      )}
+
+      {/* Analyze Button */}
+      <div className="form-submit">
+        <button onClick={handleAnalyze} disabled={loading}>
+          {loading ? "Analyzing..." : "Analyze Image"}
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && <p className="error-text">{error}</p>}
+
+      {/* Result */}
+      {result && confidence !== null && (
+        <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
+          <h3>Result: {result}</h3>
+          <p>Confidence: {confidence}%</p>
         </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="max-w-6xl mx-auto px-6 py-24 grid md:grid-cols-3 gap-8">
-        {[
-          {
-            title: "High Accuracy",
-            desc: "Vision Transformer model trained to identify subtle manipulation artifacts.",
-          },
-          {
-            title: "Secure & Private",
-            desc: "Images are processed in memory and never stored permanently.",
-          },
-          {
-            title: "Fast Analysis",
-            desc: "Results generated in seconds with confidence scoring.",
-          },
-        ].map((f) => (
-          <div
-            key={f.title}
-            className="bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur"
-          >
-            <h3 className="text-xl font-semibold mb-2">{f.title}</h3>
-            <p className="text-slate-400 text-sm">{f.desc}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="bg-black/30 py-24 px-6">
-        <h2 className="text-3xl font-semibold text-center mb-16">
-          How It Works
-        </h2>
-
-        <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-10 text-center">
-          <div>
-            <div className="text-indigo-400 text-2xl mb-3">1</div>
-            <p className="text-slate-300">
-              Upload an image you want to verify
-            </p>
-          </div>
-          <div>
-            <div className="text-indigo-400 text-2xl mb-3">2</div>
-            <p className="text-slate-300">
-              Our AI model analyzes visual patterns
-            </p>
-          </div>
-          <div>
-            <div className="text-indigo-400 text-2xl mb-3">3</div>
-            <p className="text-slate-300">
-              Receive real/fake prediction with confidence
-            </p>
-          </div>
-        </div>
-      </section>
-    </main>
+      )}
+    </div>
   );
 }
