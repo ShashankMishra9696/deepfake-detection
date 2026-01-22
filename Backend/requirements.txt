@@ -6,4 +6,3 @@ transformers
 pillow
 python-multipart
 safetensors
-python-multipart
