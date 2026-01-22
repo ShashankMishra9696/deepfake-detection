@@ -1,3 +1,6 @@
+import cv2
+import numpy as np
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -7,22 +10,32 @@ from torchvision import transforms
 from transformers import ViTConfig, ViTForImageClassification
 from safetensors.torch import load_file
 
-# ---------------- APP ----------------
+# =========================================================
+# APP
+# =========================================================
 app = FastAPI(title="Deepfake Image Detection API")
 
+# =========================================================
+# CORS (Frontend → Backend)
+# =========================================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------------- DEVICE ----------------
+# =========================================================
+# DEVICE
+# =========================================================
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ---------------- ViT CONFIG (2 CLASS) ----------------
+# =========================================================
+# ViT CONFIG (MUST MATCH TRAINING)
+# =========================================================
 config = ViTConfig(
-    num_labels=2,
+    num_labels=2,              # 0 = Real, 1 = Fake
     image_size=224,
     hidden_size=768,
     num_hidden_layers=12,
@@ -30,15 +43,36 @@ config = ViTConfig(
     intermediate_size=3072,
 )
 
-model = ViTForImageClassification(config)
+model = None
 
-# ---------------- LOAD SAFETENSORS ----------------
-state_dict = load_file("model/model.safetensors")
-model.load_state_dict(state_dict)
-model.to(device)
-model.eval()
+# =========================================================
+# LOAD MODEL (SAFE TENSORS)
+# =========================================================
+def load_model():
+    global model
+    if model is None:
+        print("⏳ Lazy-loading model...")
+        m = ViTForImageClassification(config)
+        state_dict = load_file("model/model.safetensors")
+        m.load_state_dict(state_dict)
+        m.to(device)
+        m.eval()
+        model = m
 
-# ---------------- PREPROCESS ----------------
+
+# =========================================================
+# FACE DETECTOR
+# =========================================================
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+if face_cascade.empty():
+    raise RuntimeError("Failed to load Haar cascade classifier")
+
+
+# =========================================================
+# IMAGE PREPROCESSING
+# =========================================================
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -48,12 +82,43 @@ transform = transforms.Compose([
     ),
 ])
 
-# ---------------- API ----------------
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+@app.get("/")
+def health():
+    return {"status": "Deepfake Image Detection API running"}
+
+# =========================================================
+# PREDICTION ENDPOINT
+# =========================================================
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
+    load_model()
+    # Read image
     image_bytes = await file.read()
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
+    # ---------- FACE DETECTION ----------
+    open_cv_image = np.array(image)
+    gray = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2GRAY)
+
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.2,
+        minNeighbors=5,
+        minSize=(60, 60),
+    )
+
+    # No face found
+    if len(faces) == 0:
+        return {
+            "prediction": "No Face Detected",
+            "confidence": 0.0,
+        }
+
+
+    # ---------- MODEL INFERENCE ----------
     input_tensor = transform(image).unsqueeze(0).to(device)
 
     with torch.no_grad():
