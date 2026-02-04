@@ -1,5 +1,7 @@
 "use client";
 
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 import { useState } from "react";
 import RequireAuth from "@/components/RequireAuth";
 
