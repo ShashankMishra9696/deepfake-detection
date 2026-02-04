@@ -1,53 +1,33 @@
 "use client";
 
-import { useAuth } from "@/lib/AuthContext";
+import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/lib/auth";
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  return (
+    <RequireAuth>
+      <ProfileContent />
+    </RequireAuth>
+  );
+}
 
-  if (loading) {
-    return (
-      <div className="center-page">
-        <p>Loading profile...</p>
-      </div>
-    );
-  }
+function ProfileContent() {
+  const { user } = useAuth();
 
-  if (!user) {
-    return (
-      <div className="center-page">
-        <p>You are not logged in.</p>
-      </div>
-    );
-  }
-
-  const joinedDate = user.metadata?.creationTime
-    ? new Date(user.metadata.creationTime).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "N/A";
+  if (!user) return null;
 
   return (
-    <div className="page-container">
-      <h1>Profile</h1>
+    <div className="container section">
+      <h1 className="page-title">Profile</h1>
 
-      <div className="card profile-card">
-        <div className="profile-row">
-          <span>Email</span>
-          <strong>{user.email}</strong>
-        </div>
+      <div className="card max-w-md">
+        <p className="text-sm text-gray-400">Email</p>
+        <p className="text-lg font-semibold">{user.email}</p>
 
-        <div className="profile-row">
-          <span>Joined On</span>
-          <strong>{joinedDate}</strong>
-        </div>
-
-        <div className="profile-row">
-          <span>User ID</span>
-          <strong>{user.uid}</strong>
-        </div>
+        <p className="text-sm text-gray-400 mt-4">Account Created</p>
+        <p className="text-lg font-semibold">
+          {new Date(user.metadata.creationTime || "").toLocaleDateString()}
+        </p>
       </div>
     </div>
   );

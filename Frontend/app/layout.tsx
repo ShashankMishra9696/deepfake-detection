@@ -1,7 +1,7 @@
 import "./globals.css";
+import { AuthProvider } from "@/lib/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { AuthProvider } from "@/lib/AuthContext";
 
 export default function RootLayout({
   children,
@@ -12,11 +12,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <div className="app-shell">
-            <Navbar />
-            <main className="app-content">{children}</main>
-            <Footer />
-          </div>
+          <Navbar />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

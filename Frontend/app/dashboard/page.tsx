@@ -1,31 +1,33 @@
+"use client";
+
+import { useAuth } from "@/lib/auth";
+import RequireAuth from "@/components/RequireAuth";
+
 export default function DashboardPage() {
+  const { user } = useAuth();
+
   return (
-    <div className="section">
-      <div className="container">
-        <h1>Dashboard</h1>
+    <RequireAuth>
+      <div className="container section">
+        <h1 className="page-title">Dashboard</h1>
 
         <div className="card-grid">
           <div className="card">
-            <h3>Total Scans</h3>
-            <p>Number of images analyzed so far.</p>
-            <strong style={{ fontSize: "28px" }}>12</strong>
+            <h3>Total Checks</h3>
+            <p className="stat-value">0</p>
           </div>
 
           <div className="card">
-            <h3>Fake Detected</h3>
-            <p>Images identified as deepfake.</p>
-            <strong style={{ fontSize: "28px", color: "#f87171" }}>5</strong>
+            <h3>Fake Images</h3>
+            <p className="stat-value text-red">0</p>
           </div>
 
           <div className="card">
-            <h3>Accuracy</h3>
-            <p>Average confidence score.</p>
-            <strong style={{ fontSize: "28px", color: "#a78bfa" }}>
-              92%
-            </strong>
+            <h3>Real Images</h3>
+            <p className="stat-value text-green">0</p>
           </div>
         </div>
       </div>
-    </div>
+    </RequireAuth>
   );
 }
