@@ -138,3 +138,13 @@ async def predict(file: UploadFile = File(...)):
             "prediction": "Real",
             "confidence": round(real_prob * 100, 2),
         }
+
+import os
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000)),
+    )
