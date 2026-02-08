@@ -3,9 +3,10 @@ import io
 import cv2
 import torch
 import numpy as np
-from PIL import Image
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
 from torchvision import transforms
 from transformers import ViTConfig, ViTForImageClassification
 from safetensors.torch import load_file
@@ -32,10 +33,10 @@ app.add_middleware(
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # =========================================================
-# ViT CONFIG (MUST MATCH TRAINING)
+# MODEL CONFIG (MATCH TRAINING)
 # =========================================================
 config = ViTConfig(
-    num_labels=2,  # 0 = Real, 1 = Fake
+    num_labels=2,
     image_size=224,
     hidden_size=768,
     num_hidden_layers=12,
@@ -52,11 +53,12 @@ def load_model():
     global model
     if model is None:
         print("⏳ Loading model...")
-        model = ViTForImageClassification(config)
+        m = ViTForImageClassification(config)
         state_dict = load_file("model/model.safetensors")
-        model.load_state_dict(state_dict)
-        model.to(device)
-        model.eval()
+        m.load_state_dict(state_dict)
+        m.to(device)
+        m.eval()
+        model = m
         print("✅ Model loaded")
 
 # =========================================================
@@ -66,22 +68,19 @@ face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 if face_cascade.empty():
-    raise RuntimeError("❌ Haar cascade failed to load")
+    raise RuntimeError("Haar cascade failed to load")
 
 # =========================================================
-# IMAGE TRANSFORM
+# TRANSFORMS
 # =========================================================
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.5, 0.5, 0.5],
-        std=[0.5, 0.5, 0.5],
-    ),
+    transforms.Normalize([0.5]*3, [0.5]*3),
 ])
 
 # =========================================================
-# HEALTH CHECK (REQUIRED)
+# HEALTH CHECK
 # =========================================================
 @app.get("/")
 def health():
@@ -98,36 +97,30 @@ async def predict(file: UploadFile = File(...)):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
     # Face detection
-    open_cv_image = np.array(image)
-    gray = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2GRAY)
-    faces = face_cascade.detectMultiScale(
-        gray, scaleFactor=1.2, minNeighbors=5, minSize=(60, 60)
-    )
+    np_img = np.array(image)
+    gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.2, 5)
 
     if len(faces) == 0:
         return {"prediction": "No Face Detected", "confidence": 0.0}
 
-    # Inference
     input_tensor = transform(image).unsqueeze(0).to(device)
+
     with torch.no_grad():
         logits = model(pixel_values=input_tensor).logits
         probs = torch.softmax(logits, dim=1)[0]
 
-    real_prob = probs[0].item()
-    fake_prob = probs[1].item()
+    real, fake = probs.tolist()
 
-    if fake_prob > real_prob:
-        return {"prediction": "Fake", "confidence": round(fake_prob * 100, 2)}
+    if fake > real:
+        return {"prediction": "Fake", "confidence": round(fake * 100, 2)}
     else:
-        return {"prediction": "Real", "confidence": round(real_prob * 100, 2)}
+        return {"prediction": "Real", "confidence": round(real * 100, 2)}
 
 # =========================================================
-# LOCAL RUN ONLY (SAFE)
+# ENTRYPOINT (IMPORTANT)
 # =========================================================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8080)),
-    )
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
