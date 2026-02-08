@@ -1,13 +1,10 @@
 fastapi
 uvicorn
-python-multipart
-pillow
 numpy
+pillow
 opencv-python-headless
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
+torch==2.1.2
+torchvision==0.16.2
 transformers
 safetensors
-
-# Note: to install CPU wheels run:
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python-multipart
