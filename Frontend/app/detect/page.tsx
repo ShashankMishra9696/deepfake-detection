@@ -3,30 +3,9 @@
 import { useState, type ChangeEvent } from "react";
 import RequireAuth from "@/components/RequireAuth";
 
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-
-/* -----------------------------------------
-   Optional: local dashboard stats
------------------------------------------ */
-function updateDashboardStats(prediction: string) {
-  if (typeof window === "undefined") return;
-
-  const stats =
-    JSON.parse(
-      localStorage.getItem("dashboardStats") || ""
-    ) || { total: 0, real: 0, fake: 0 };
-
-  stats.total += 1;
-  if (prediction === "Real") stats.real += 1;
-  if (prediction === "Fake") stats.fake += 1;
-
-  localStorage.setItem("dashboardStats", JSON.stringify(stats));
-}
-
-/* -----------------------------------------
-   Detect Page
------------------------------------------ */
+/* ------------------------------------------------
+   Detect Page – Stable & Railway/Vercel Safe
+------------------------------------------------ */
 export default function DetectPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -35,7 +14,7 @@ export default function DetectPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* ---------- Image Select ---------- */
+  /* ---------- Image Selection ---------- */
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -47,10 +26,15 @@ export default function DetectPage() {
     setError(null);
   };
 
-  /* ---------- Analyze ---------- */
+  /* ---------- Analyze Image ---------- */
   const handleAnalyze = async () => {
     if (!imageFile) {
       setError("Please upload an image first.");
+      return;
+    }
+
+    if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
+      setError("Backend URL not configured.");
       return;
     }
 
@@ -60,18 +44,18 @@ export default function DetectPage() {
     try {
       const formData = new FormData();
 
-      // 🔴 MUST be exactly "file"
+      // 🚨 THIS MUST BE EXACTLY "file"
       formData.append("file", imageFile);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        throw new Error("Backend URL not configured");
-      }
-
-      const response = await fetch(`${backendUrl}/predict`, {
-        method: "POST",
-        body: formData, // ✅ multipart/form-data
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/predict`,
+        {
+          method: "POST",
+          body: formData,
+          // ❌ DO NOT SET HEADERS
+          // browser sets multipart boundary automatically
+        }
+      );
 
       if (!response.ok) {
         const text = await response.text();
@@ -82,21 +66,9 @@ export default function DetectPage() {
 
       setResult(data.prediction);
       setConfidence(data.confidence);
-
-      // Optional Firestore save (safe)
-      if (auth.currentUser) {
-        await addDoc(collection(db, "detections"), {
-          uid: auth.currentUser.uid,
-          prediction: data.prediction,
-          confidence: data.confidence,
-          createdAt: serverTimestamp(),
-        });
-      }
-
-      updateDashboardStats(data.prediction);
     } catch (err) {
       console.error(err);
-      setError("Failed to analyze image. Please try again.");
+      setError("Failed to analyze image.");
     } finally {
       setLoading(false);
     }
@@ -110,11 +82,7 @@ export default function DetectPage() {
 
         <div className="form-group">
           <label>Upload Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
+          <input type="file" accept="image/*" onChange={handleImageChange} />
         </div>
 
         {previewUrl && (
