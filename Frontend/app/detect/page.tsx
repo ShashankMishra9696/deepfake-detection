@@ -59,38 +59,30 @@ export default function DetectPage() {
 
     try {
       const formData = new FormData();
+
+      // 🔴 THIS KEY MUST BE "file"
       formData.append("file", imageFile);
 
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-      const response = await fetch(`${BACKEND_URL}/predict`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/predict",
+        {
+          method: "POST",
+          body: formData, // ✅ FormData
+          // ❌ DO NOT set Content-Type
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Backend error");
       }
 
-      const data: {
-        prediction: string;
-        confidence: number;
-      } = await response.json();
+      const data = await response.json();
 
       setResult(data.prediction);
       setConfidence(data.confidence);
 
-      updateDashboardStats(data.prediction);
-
-      // 🔹 Store in Firestore
-      await addDoc(collection(db, "detections"), {
-        uid: auth.currentUser?.uid ?? null,
-        prediction: data.prediction,
-        confidence: data.confidence,
-        createdAt: serverTimestamp(),
-      });
-    } catch {
-      setError("Failed to analyze image. Is backend running?");
+    } catch (err) {
+      setError("Failed to analyze image.");
     } finally {
       setLoading(false);
     }
