@@ -7,15 +7,15 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 /* -----------------------------------------
-   Optional: local dashboard stats (safe)
+   Optional: local dashboard stats
 ----------------------------------------- */
 function updateDashboardStats(prediction: string) {
   if (typeof window === "undefined") return;
 
-  const stats = JSON.parse(
-    localStorage.getItem("dashboardStats") ??
-      JSON.stringify({ total: 0, real: 0, fake: 0 })
-  );
+  const stats =
+    JSON.parse(
+      localStorage.getItem("dashboardStats") || ""
+    ) || { total: 0, real: 0, fake: 0 };
 
   stats.total += 1;
   if (prediction === "Real") stats.real += 1;
@@ -60,20 +60,22 @@ export default function DetectPage() {
     try {
       const formData = new FormData();
 
-      // 🔴 THIS KEY MUST BE "file"
+      // 🔴 MUST be exactly "file"
       formData.append("file", imageFile);
 
-      const response = await fetch(
-        process.env.NEXT_PUBLIC_BACKEND_URL + "/predict",
-        {
-          method: "POST",
-          body: formData, // ✅ FormData
-          // ❌ DO NOT set Content-Type
-        }
-      );
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("Backend URL not configured");
+      }
+
+      const response = await fetch(`${backendUrl}/predict`, {
+        method: "POST",
+        body: formData, // ✅ multipart/form-data
+      });
 
       if (!response.ok) {
-        throw new Error("Backend error");
+        const text = await response.text();
+        throw new Error(text || "Backend error");
       }
 
       const data = await response.json();
@@ -81,8 +83,20 @@ export default function DetectPage() {
       setResult(data.prediction);
       setConfidence(data.confidence);
 
+      // Optional Firestore save (safe)
+      if (auth.currentUser) {
+        await addDoc(collection(db, "detections"), {
+          uid: auth.currentUser.uid,
+          prediction: data.prediction,
+          confidence: data.confidence,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      updateDashboardStats(data.prediction);
     } catch (err) {
-      setError("Failed to analyze image.");
+      console.error(err);
+      setError("Failed to analyze image. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,7 +110,11 @@ export default function DetectPage() {
 
         <div className="form-group">
           <label>Upload Image</label>
-          <input type="file" accept="image/*" onChange={handleImageChange} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+          />
         </div>
 
         {previewUrl && (
