@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function RootLayout({
   children,
@@ -16,6 +17,7 @@ export default function RootLayout({
           <main className="min-h-screen">{children}</main>
           <Footer />
         </AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
